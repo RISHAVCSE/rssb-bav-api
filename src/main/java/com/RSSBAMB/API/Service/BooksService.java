@@ -2,13 +2,19 @@ package com.RSSBAMB.API.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.RSSBAMB.API.DTO.BookWithStatusDTO;
 import com.RSSBAMB.API.DTO.BooksRegisterDTO;
+import com.RSSBAMB.API.Repo.BookAllocationRepo;
+import com.RSSBAMB.API.Repo.BooksHistoryRepo;
 import com.RSSBAMB.API.Repo.BooksRepo;
+import com.RSSBAMB.API.Repo.CentreBookRepository;
 import com.RSSBAMB.API.model.Books;
+import com.RSSBAMB.API.model.BooksHistory;
 
 @Service
 public class BooksService {
@@ -19,22 +25,45 @@ public class BooksService {
 		this.booksRepo=booksRepo;
 	}
 	
-	public Books save(BooksRegisterDTO booksRegisterDTO) {
+	@Autowired
+	private BooksHistoryRepo booksHistoryRepo;
+	
+	@Autowired
+	private BookAllocationRepo bookAllocationRepo;
+	
+	@Autowired
+	private CentreBookRepository centreBookRepository;
+	
+	public void save(BooksRegisterDTO booksRegisterDTO, String changedBy) {
+		
+		 if (booksRegisterDTO.getMmsId() == null || booksRegisterDTO.getMmsId().isEmpty()) {
+		        throw new RuntimeException("mmsId must be provided before saving the book.");
+		    }
 		Books books=new Books();
+		 Optional<Books> existingBook = booksRepo.findByMmsId(booksRegisterDTO.getMmsId());
+		 if(!existingBook.isEmpty()) {
+			 throw new RuntimeException("MMS Code already exist");
+			 
+		 }
 		
-		books.setBook_name(booksRegisterDTO.getBook_name());
+		
+		
+		books.setBookName(booksRegisterDTO.getBookName());
 		books.setAmount(booksRegisterDTO.getAmount());
-		books.setMms_Id(booksRegisterDTO.getMms_Id());
+		books.setMmsId(booksRegisterDTO.getMmsId());
 		books.setQuantity(booksRegisterDTO.getQuantity());
+		booksRepo.save(books);
+		BooksHistory historyRecord=books.createHistoryRecord("ADD","SuperAdmin");
 		
-		return booksRepo.save(books);
+		booksHistoryRepo.save(historyRecord);	 
+
 		
 	}
 	
-	public Books updateBook(Long id,Books updatedBook) {
+	public Books updateBook(Long id,BooksRegisterDTO updatedBook) {
 		// Check if the book with the given id exists
 		String str = id+"";
-		 Optional<Books> existingBook = booksRepo.findByMms_Id(str);
+		 Optional<Books> existingBook = booksRepo.findByMmsId(str);
 
 		    // Check if the book with the provided bookId exists
 		    if (existingBook.isEmpty()) {
@@ -43,9 +72,9 @@ public class BooksService {
 
 		    // Update the book details
 		    Books book = existingBook.get();
-		    book.setBook_name(updatedBook.getBook_name());
+		    book.setBookName(updatedBook.getBookName());
 		    book.setAmount(updatedBook.getAmount());
-		    book.setQuantity(updatedBook.getQuantity());
+		    book.setQuantity(updatedBook.getStockavailable()+book.getQuantity());
 
 		    return booksRepo.save(book);					
 	}
@@ -53,10 +82,38 @@ public class BooksService {
 		return booksRepo.findAll();
 		
 	}
+	public List<BookWithStatusDTO> getAllBooksWithStatus(){
+	  List<Books> books=booksRepo.findAll();
+	  
+	  
+	  return books.stream().map(book -> {
+          // Fetch additional quantities for each book
+			int pendingForReview= bookAllocationRepo.sumQuantityByMmsId(book.getMmsId());
+			
+			int allotedQuantityByCentre= centreBookRepository.sumAllocatedQuantityByMmsId(book.getMmsId());
+          
+          return new BookWithStatusDTO(
+              book.getMmsId(),
+              book.getBookName(),
+              book.getQuantity(),
+              book.getAmount(),
+              allotedQuantityByCentre,
+              pendingForReview
+          );
+      }).collect(Collectors.toList());
+  }
+		
 	
-	public void deleteBook(Long id) {
-		booksRepo.deleteById(id);
+	public void testingData() {
+	int allotedQuantity= bookAllocationRepo.sumQuantityByMmsId("585");
+	
+	int allotedQuantityByCentre= centreBookRepository.sumAllocatedQuantityByMmsId("585");
+	System.out.println(allotedQuantityByCentre);
 	}
+	
+//	public void deleteBook(Long id) {
+//		booksRepo.deleteById(id);
+//	}
 	
 
 }
