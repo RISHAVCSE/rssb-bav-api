@@ -10,11 +10,12 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import com.RSSBAMB.API.model.Books;
 
 @RepositoryRestResource
-public interface BooksRepo extends JpaRepository<Books,Long> {
-//	Optional<Books> findByBooks(String book_name);
-    Optional<Books> findByBookId(Long bookId); // Assuming bookId is a field in Books
-    @Query("SELECT b FROM Books b WHERE b.mms_Id = :mms_Id")
-    Optional<Books> findByMms_Id(@Param("mms_Id") String mmsId);
+public interface BooksRepo extends JpaRepository<Books,String> {
+	
+    @Query("SELECT b FROM Books b WHERE b.mmsId = :mmsId")
+    Optional<Books> findByMmsId(@Param("mmsId") String mmsId);
+    
+    
 
    
 

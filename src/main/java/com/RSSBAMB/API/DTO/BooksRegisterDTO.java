@@ -1,24 +1,28 @@
 package com.RSSBAMB.API.DTO;
 
-import jakarta.persistence.Column;
 
 public class BooksRegisterDTO {
-	private String mms_Id;
-	private String book_name;
-	private int quantity;
+	private String mmsId;
+	private String bookName;
 	private int amount;
-	public String getMms_Id() {
-		return mms_Id;
+	private int quantity;
+	private int stockavailable;
+	
+	public String getMmsId() {
+		return mmsId;
 	}
-	public void setMms_Id(String mms_Id) {
-		this.mms_Id = mms_Id;
+	public void setMmsId(String mmsId) {
+		this.mmsId = mmsId;
 	}
-	public String getBook_name() {
-		return book_name;
+	public String getBookName() {
+		return bookName;
 	}
-	public void setBook_name(String book_name) {
-		this.book_name = book_name;
+	public void setBookName(String bookName) {
+		this.bookName = bookName;
 	}
+	
+	
+	
 	public int getQuantity() {
 		return quantity;
 	}
@@ -30,6 +34,12 @@ public class BooksRegisterDTO {
 	}
 	public void setAmount(int amount) {
 		this.amount = amount;
+	}
+	public int getStockavailable() {
+		return stockavailable;
+	}
+	public void setStockavailable(int stockavailable) {
+		this.stockavailable = stockavailable;
 	}
 	
 
