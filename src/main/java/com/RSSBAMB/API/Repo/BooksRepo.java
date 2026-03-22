@@ -1,5 +1,6 @@
 package com.RSSBAMB.API.Repo;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,6 +15,9 @@ public interface BooksRepo extends JpaRepository<Books,String> {
 	
     @Query("SELECT b FROM Books b WHERE b.mmsId = :mmsId")
     Optional<Books> findByMmsId(@Param("mmsId") String mmsId);
+
+    @Query("SELECT b FROM Books b WHERE b.type = :type")
+    List<Books> findByType(@Param("type") int type);
     
     
 

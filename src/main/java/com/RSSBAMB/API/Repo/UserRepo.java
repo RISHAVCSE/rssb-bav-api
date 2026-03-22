@@ -9,6 +9,8 @@ import com.RSSBAMB.API.model.User;
 
 @RepositoryRestResource
 public interface UserRepo extends JpaRepository<User,Long>  {
-	Optional<User> findByUserName(String userName);
+	Optional<User> findByUsername(String username);
+	Optional<User> findByKeycloakId(String keycloakId);
+
 
 }
