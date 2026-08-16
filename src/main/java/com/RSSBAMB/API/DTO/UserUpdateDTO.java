@@ -1,5 +1,6 @@
 package com.RSSBAMB.API.DTO;
 
+import com.RSSBAMB.API.model.Role;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,6 +15,6 @@ public class UserUpdateDTO {
     private String email;
     private String firstName;
     private String lastName;
-    private String roles;
+    private Role role;
 }
 

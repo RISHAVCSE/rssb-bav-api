@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.RSSBAMB.API.Repo.BookAllotmentAllocationRecordRepo;
+import com.RSSBAMB.API.Repo.BookAllocationRepo;
 import com.RSSBAMB.API.Repo.BooksRepo;
 import com.RSSBAMB.API.Repo.CentreBookRepository;
 import com.RSSBAMB.API.Repo.CentreRepo;
@@ -43,6 +44,9 @@ public class CentreBookService {
 	
 	@Autowired
 	private BookAllotmentAllocationRecordRepo bookAllotmentAllocationRecordRepo;
+
+	@Autowired
+	private BookAllocationRepo bookAllocationRepo;
 	
 	public CentreBook allocateBookToCentre(String mmsId,int centreCode,int quantity) {
 		Books book=bookRepository.findById(mmsId)
@@ -262,10 +266,16 @@ public class CentreBookService {
 		return centreBookRepository.findByCentreCentreCode(centreCode)
 				.stream()
 				.map(cb -> {
+					int pendingForApproval = bookAllocationRepo.sumQuantityByMmsIdAndCentreCode(
+							cb.getBook().getMmsId(),
+							centreCode
+					);
+					int availableQuantity = cb.getAllocatedQuantity() - pendingForApproval;
+
 					CentreBookTable dto = new CentreBookTable();
 					dto.setMmsId(cb.getBook().getMmsId());
 					dto.setBookName(cb.getBook().getBookName());
-					dto.setQuantity(cb.getBook().getQuantity());
+					dto.setQuantity(Math.max(availableQuantity, 0));
 					dto.setAmount(cb.getBook().getAmount());
 					return dto;
 				})

@@ -25,14 +25,9 @@ public class KeycloakProvider {
     @Value("${keycloak.client-secret:}")
     private String clientSecret;
 
-    @Value("${keycloak.username:admin}")
-    private String username;
-
-    @Value("${keycloak.password:admin}")
-    private String password;
-
     /**
      * Creates and configures the Keycloak Admin Client Bean
+     * Uses client_credentials grant type for service-to-service authentication
      * @return Keycloak admin client instance
      */
     @Bean

@@ -29,10 +29,10 @@ import java.util.Optional;
  * Provides endpoints for CRUD operations on users
  */
 @Slf4j
+@CrossOrigin(origins="http://localhost:3000")
 @RestController
 @RequestMapping("/api/users")
 @Tag(name = "User Management", description = "APIs for managing users with Keycloak integration")
-@SecurityRequirement(name = "bearerAuth")
 public class UserController {
 
     @Autowired
@@ -43,6 +43,7 @@ public class UserController {
      * POST /api/users
      */
     @PostMapping
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Create a new user", description = "Creates a new user in Keycloak and syncs to database")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "User created successfully"),
@@ -58,8 +59,8 @@ public class UserController {
             user.setEmail(userCreateDTO.getEmail());
             user.setFirstName(userCreateDTO.getFirstName());
             user.setLastName(userCreateDTO.getLastName());
-            user.setRoles(userCreateDTO.getRoles());
-//            user.setCreatedBy(userCreateDTO.getCreatedBy());
+            user.setRole(userCreateDTO.getRole());
+            user.setParentUser(userCreateDTO.getParentUserId());
 
             User createdUser = userService.createUser(user, userCreateDTO.getPassword());
 
@@ -71,6 +72,49 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
             log.error("Error creating user: {}", e.getMessage(), e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+    }
+
+    /**
+     * Bootstrap endpoint - Create initial SUPERADMIN
+     * Only works if no users exist in the system
+     * Call this FIRST to bootstrap your application
+     * No authentication required for this endpoint
+     * 
+     * POST /api/users/bootstrap
+     */
+    @PostMapping("/bootstrap")
+    @Operation(summary = "Bootstrap initial SUPERADMIN", 
+        description = "Creates the first SUPERADMIN user. Only works when database is empty. No authentication required.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Bootstrap SUPERADMIN created successfully"),
+            @ApiResponse(responseCode = "400", description = "Bootstrap failed or users already exist"),
+            @ApiResponse(responseCode = "500", description = "Server error")
+    })
+    public ResponseEntity<?> bootstrapSuperAdmin(@RequestBody UserCreateDTO userCreateDTO) {
+        try {
+            log.warn("🔐 Bootstrap request received for: {}", userCreateDTO.getUsername());
+            
+            User user = new User();
+            user.setUsername(userCreateDTO.getUsername());
+            user.setEmail(userCreateDTO.getEmail());
+            user.setFirstName(userCreateDTO.getFirstName());
+            user.setLastName(userCreateDTO.getLastName());
+
+            User createdUser = userService.bootstrapCreateSuperAdmin(user, userCreateDTO.getPassword());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "✓ Bootstrap SUPERADMIN created successfully! Now you can login and create other users.");
+            response.put("data", createdUser);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            log.error("❌ Bootstrap failed: {}", e.getMessage());
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", e.getMessage());
@@ -149,6 +193,45 @@ public class UserController {
             errorResponse.put("success", false);
             errorResponse.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+
+        }
+    }
+
+    /**
+     * Get user by Keycloak ID
+     * GET /api/users/keycloak/{keycloakId}
+     */
+    @GetMapping("/keycloak/{keycloakId}")
+    @Operation(summary = "Get user by Keycloak ID", description = "Retrieves a user by their Keycloak user ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User found"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
+            @ApiResponse(responseCode = "500", description = "Server error")
+    })
+    public ResponseEntity<?> getUserByKeycloakId(
+            @Parameter(description = "Keycloak user ID")
+            @PathVariable String keycloakId) {
+        try {
+            Optional<User> user = userService.getUserByKeycloakId(keycloakId);
+
+            if (user.isPresent()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("data", user.get());
+                return ResponseEntity.ok(response);
+            } else {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "User not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            }
+        } catch (Exception e) {
+            log.error("Error fetching user: {}", e.getMessage(), e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+
         }
     }
 
@@ -168,9 +251,7 @@ public class UserController {
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("count", users.size());
             response.put("data", users);
-
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error fetching users: {}", e.getMessage(), e);
@@ -178,6 +259,7 @@ public class UserController {
             errorResponse.put("success", false);
             errorResponse.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+
         }
     }
 
@@ -186,11 +268,11 @@ public class UserController {
      * PUT /api/users/{id}
      */
     @PutMapping("/{id}")
-    @Operation(summary = "Update user", description = "Updates user information in both Keycloak and database")
+    @Operation(summary = "Update a user", description = "Updates an existing user in both Keycloak and database")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User updated successfully"),
-            @ApiResponse(responseCode = "404", description = "User not found"),
             @ApiResponse(responseCode = "400", description = "Invalid input"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
             @ApiResponse(responseCode = "500", description = "Server error")
     })
     public ResponseEntity<?> updateUser(
@@ -204,7 +286,7 @@ public class UserController {
             userDetails.setEmail(userUpdateDTO.getEmail());
             userDetails.setFirstName(userUpdateDTO.getFirstName());
             userDetails.setLastName(userUpdateDTO.getLastName());
-            userDetails.setRoles(userUpdateDTO.getRoles());
+            userDetails.setRole(userUpdateDTO.getRole());
 
             User updatedUser = userService.updateUser(id, userDetails);
 
@@ -214,18 +296,12 @@ public class UserController {
             response.put("data", updatedUser);
 
             return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            log.error("Error updating user: {}", e.getMessage());
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("message", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         } catch (Exception e) {
             log.error("Error updating user: {}", e.getMessage(), e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
 
@@ -234,9 +310,9 @@ public class UserController {
      * DELETE /api/users/{id}
      */
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete user", description = "Deletes a user from both Keycloak and database")
+    @Operation(summary = "Delete a user", description = "Deletes a user from both Keycloak and database")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "User deleted successfully"),
+            @ApiResponse(responseCode = "204", description = "User deleted successfully"),
             @ApiResponse(responseCode = "404", description = "User not found"),
             @ApiResponse(responseCode = "500", description = "Server error")
     })
@@ -253,18 +329,12 @@ public class UserController {
             response.put("message", "User deleted successfully");
 
             return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            log.error("Error deleting user: {}", e.getMessage());
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("message", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         } catch (Exception e) {
             log.error("Error deleting user: {}", e.getMessage(), e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
 
@@ -273,11 +343,11 @@ public class UserController {
      * POST /api/users/{id}/reset-password
      */
     @PostMapping("/{id}/reset-password")
-    @Operation(summary = "Reset user password", description = "Resets password for a user in Keycloak")
+    @Operation(summary = "Reset password", description = "Resets the password for a user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Password reset successfully"),
-            @ApiResponse(responseCode = "404", description = "User not found"),
             @ApiResponse(responseCode = "400", description = "Invalid input"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
             @ApiResponse(responseCode = "500", description = "Server error")
     })
     public ResponseEntity<?> resetPassword(
@@ -294,14 +364,37 @@ public class UserController {
             response.put("message", "Password reset successfully");
 
             return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            log.error("Error resetting password: {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("Error resetting password: {}", e.getMessage(), e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
+    }
+
+    /**
+     * Get Keycloak users (admin only)
+     * GET /api/users/keycloak/list/all
+     */
+    @GetMapping("/keycloak/list/all")
+    @Operation(summary = "Get all Keycloak users", description = "Retrieves all users from Keycloak (SUPERADMIN only)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Keycloak users retrieved successfully"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - SUPERADMIN only"),
+            @ApiResponse(responseCode = "500", description = "Server error")
+    })
+    public ResponseEntity<?> getKeycloakUsers() {
+        try {
+            var keycloakUsers = userService.getKeycloakUsers();
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", keycloakUsers);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Error resetting password: {}", e.getMessage(), e);
+            log.error("Error fetching Keycloak users: {}", e.getMessage(), e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", e.getMessage());

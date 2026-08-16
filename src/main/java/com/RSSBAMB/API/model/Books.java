@@ -13,10 +13,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import serviceInterface.BookTemplateForHistory;
 
 
 @Data
+@ToString(exclude = "centreBooks")
+@EqualsAndHashCode(exclude = "centreBooks")
 @Entity
 @Table(name="books")
 public class Books implements BookTemplateForHistory {
