@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import com.RSSBAMB.API.DTO.CentreBookTable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -54,8 +55,8 @@ public class CentreBookController {
 	}
 	
     @GetMapping("/getBookBasedUponCentre")
-    public ResponseEntity<List<CentreBook>> getBookBasedUponCentre(@RequestParam String mmsId) {
-        List<CentreBook> centreBooks = centreBookService.getCentresByMmsId(mmsId);
+    public ResponseEntity<List<CentreBookDTO>> getBookBasedUponCentre(@RequestParam String mmsId) {
+        List<CentreBookDTO> centreBooks = centreBookService.getCentresByMmsId(mmsId);
         return ResponseEntity.ok(centreBooks);
     }
 
@@ -65,14 +66,14 @@ public class CentreBookController {
 		List<CentreBook> allRecords=centreBookService.getAllRecords();
 		return ResponseEntity.ok(allRecords);
 	}
-	
+
 	@GetMapping("/getAllBookBasedUponCentre")
-	public ResponseEntity<List<CentreBook>> getAllBookBasedUponCentre(@RequestParam int centreCode){
-		List<CentreBook> centreBooks=centreBookService.getBooksByCentreCode(centreCode);
-		
+	public ResponseEntity<List<CentreBookTable>> getAllBookBasedUponCentre(@RequestParam int centreCode){
+		List<CentreBookTable> centreBooks = centreBookService.getBooksByCentreCode(centreCode);
 		return ResponseEntity.ok(centreBooks);
 	}
-	
+
+
 	@GetMapping("/getAllRecordsBasedUponCentre")
 	public ResponseEntity <Map<String, Map<LocalDate, List<BookAllotmentAllocationRecord>>>> getAllRecordsBasedUponCentre(
 	        @RequestParam int centreCode) {

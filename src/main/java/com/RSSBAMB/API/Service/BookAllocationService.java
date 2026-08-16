@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import com.RSSBAMB.API.DTO.BookAllocationDTO;
 import com.RSSBAMB.API.DTO.BookAllocationDTO.BookAllocationDetail;
-import com.RSSBAMB.API.DTO.CentreBookDTO;
 import com.RSSBAMB.API.Repo.BookAllocationRepo;
 import com.RSSBAMB.API.Repo.BooksHistoryRepo;
 import com.RSSBAMB.API.Repo.BooksRepo;
@@ -25,6 +24,8 @@ import com.RSSBAMB.API.model.Books;
 import com.RSSBAMB.API.model.BooksHistory;
 import com.RSSBAMB.API.model.CentreBook;
 import com.RSSBAMB.API.model.Centres;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class BookAllocationService {
@@ -54,12 +55,21 @@ public class BookAllocationService {
 		for(BookAllocationDetail book: request.getBooks()) {
 			CentreBook stockOpt=centreBookRepository.findByBookMmsIdAndCentreCentreCode(book.getMmsId(),request.getCentreCode());
 
-			if(stockOpt.getAllocatedQuantity()<=book.getQuantity()) {
+			if(stockOpt == null) {
+				throw new IllegalArgumentException("Stock available nahi hai for book: " + book.getBookName());
+			}
+
+			if(book.getQuantity() <= 0) {
+				throw new IllegalArgumentException("Quantity value not allowed for book: " + book.getBookName());
+			}
+
+			int pendingForApproval = bookAllocationRepo.sumQuantityByMmsIdAndCentreCode(book.getMmsId(), request.getCentreCode());
+			int availableQuantity = stockOpt.getAllocatedQuantity() - pendingForApproval;
+
+			if(availableQuantity < book.getQuantity()) {
                 throw new IllegalArgumentException("Stock available nahi hai for book: " + book.getBookName());
 
 			}
-			stockOpt.setAllocatedQuantity(stockOpt.getAllocatedQuantity()-book.getQuantity());
-			centreBookRepository.save(stockOpt);
 		}
 		
 		List<BookAllocation> allocations=request.getBooks().stream()
@@ -135,6 +145,7 @@ public class BookAllocationService {
 	public Optional<Integer> getSanctionedAmountByCentreCode(int centreCode){
 		return centreRepository.findByCentreCode(centreCode).map(Centres::getSanctionedAmount);
 	}
+	@Transactional
 	public void allocationApproval(BookAllocationDTO request, boolean status) {
 		if(status) {
 			for(BookAllocationDetail book : request.getBooks() ) {
@@ -169,16 +180,21 @@ public class BookAllocationService {
 							// Check if new allocation exceeds limit (with 100 buffer)
 						
 							CentreBook existingCentreBook=centreBookRepository.findByBookMmsIdAndCentreCentreCode(book.getMmsId(), request.getCentreCode());
+							if(existingCentreBook == null || existingCentreBook.getAllocatedQuantity() < requestedQuantity) {
+								throw new RuntimeException("Centre stock not available for book: " + book.getBookName());
+							}
 
 							int previousquantity=existingCentreBook.getAllocatedQuantity();
+							int remainingCentreQuantity = previousquantity - requestedQuantity;
+							existingCentreBook.setAllocatedQuantity(remainingCentreQuantity);
 
 							Centres centre1 = centreRepository.findById(request.getCentreCode())
 								    .orElseThrow(() -> new RuntimeException("Centre not found"));
 								centre1.setAmountUtilized(newValue + total);  // Update if needed
 							logger.logAllocation(book.getMmsId(), request.getCentreCode(), book.getBookName(), 
 									book.getAmount(), requestedQuantity, "Sales",
-									"Sales Approved", previousquantity+requestedQuantity, sanctionedAmount, 
-									total-newValue, previousquantity, current,
+									"Sales Approved", previousquantity, sanctionedAmount, 
+									total-newValue, remainingCentreQuantity, current,
 									"SuperAdmin", "Sales");
 
 							
@@ -187,8 +203,8 @@ public class BookAllocationService {
 						    
 						    
 						    //End
+							centreBookRepository.save(existingCentreBook);
 							booksRepo.save(bookAlloted.get());
-							bookAllocationRepo.deleteByCentreCode(request.getCentreCode());
 							
 							
 						}else {
@@ -200,19 +216,12 @@ public class BookAllocationService {
 				
 				
 			}
+
+			bookAllocationRepo.deleteByCentreCode(request.getCentreCode());
 			
 		}else {
 			
-			for(BookAllocationDetail book: request.getBooks()) {
-				CentreBook stockOpt=centreBookRepository.findByBookMmsIdAndCentreCentreCode(book.getMmsId(),request.getCentreCode());
-
-				stockOpt.setAllocatedQuantity(stockOpt.getAllocatedQuantity()+book.getQuantity());
-				
-
-				centreBookRepository.save(stockOpt);
-				bookAllocationRepo.deleteByCentreCode(request.getCentreCode());
-
-			}
+			bookAllocationRepo.deleteByCentreCode(request.getCentreCode());
 			
 		}
 		

@@ -10,10 +10,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.RSSBAMB.API.DTO.CentreBookDTO;
+import com.RSSBAMB.API.DTO.CentreBookTable;
+import com.RSSBAMB.API.DTO.CentreDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.RSSBAMB.API.Repo.BookAllotmentAllocationRecordRepo;
+import com.RSSBAMB.API.Repo.BookAllocationRepo;
 import com.RSSBAMB.API.Repo.BooksRepo;
 import com.RSSBAMB.API.Repo.CentreBookRepository;
 import com.RSSBAMB.API.Repo.CentreRepo;
@@ -40,6 +44,9 @@ public class CentreBookService {
 	
 	@Autowired
 	private BookAllotmentAllocationRecordRepo bookAllotmentAllocationRecordRepo;
+
+	@Autowired
+	private BookAllocationRepo bookAllocationRepo;
 	
 	public CentreBook allocateBookToCentre(String mmsId,int centreCode,int quantity) {
 		Books book=bookRepository.findById(mmsId)
@@ -159,14 +166,8 @@ public class CentreBookService {
 				.orElseThrow(()-> new RuntimeException("Centre not found"));
 		int availableQuantity=book.getQuantity();
 		String allocationType="";
-		
-      
-
-		
-
-
 		CentreBook existingCentreBook=centreBookRepository.findByBookMmsIdAndCentreCentreCode(mmsId, centreCode);
-		
+		Integer existedQuanity =existingCentreBook.getAllocatedQuantity();
 		if(existingCentreBook!=null) {
 			if(availableQuantity<quantity) {
 				throw new RuntimeException("Quantity value not allowed");
@@ -184,7 +185,9 @@ public class CentreBookService {
 			existingCentreBook.setAllocatedQuantity(quantity);
 			// Get total allocated amount - handle null case properly
 						Integer totalAmount = centreBookRepository.getTotalAmountForCentre(centreCode);
-						int total = totalAmount != null ? totalAmount : 0;
+						Integer existedAmount=existedQuanity* book.getAmount();
+						Integer allowedAmount=totalAmount-existedAmount;
+						int total = allowedAmount != null ? allowedAmount : 0;
 
 						// Get sanctioned amount - properly unwrap Optional
 						int sanctionedAmount = getSanctionedAmountByCentreCode(centreCode)
@@ -193,7 +196,7 @@ public class CentreBookService {
 						// Calculate new value
 						int newValue = quantity * book.getAmount();
 						// Check if new allocation exceeds limit (with 100 buffer)
-						if (newValue + total > sanctionedAmount + 100) {
+						if (newValue + allowedAmount > sanctionedAmount + 100) {
 						    throw new RuntimeException(String.format(
 						        "Allocation would exceed limit. Current: %d, New: %d, Sanctioned: %d (Buffer: 100)",
 						        total, newValue, sanctionedAmount
@@ -230,16 +233,53 @@ public class CentreBookService {
 		
 	}
 	
-	public List<CentreBook> getCentresByMmsId(String mmsID){
-		return centreBookRepository.findByBook_mmsId(mmsID);
+	public List<CentreBookDTO> getCentresByMmsId(String mmsID){
+
+		List<CentreBook> entities = centreBookRepository.findByBook_mmsId(mmsID);
+//		return entities.stream().map(entity -> {
+//			CentreBookDTO dto = new CentreBookDTO();
+//			dto.setMmsId(entity.getBook().getMmsId());
+//			dto.setCentreCode(entity.getCentre().getCentreCode()); // assuming centreCode exists in Centres
+//			dto.setQuantity(entity.getAllocatedQuantity());
+//			return dto;
+//		}).toList();
+
+		return entities.stream().map(entity -> {
+			CentreBookDTO dto = new CentreBookDTO();
+			dto.setQuantity(entity.getAllocatedQuantity()); // map allocatedQuantity → quantity
+
+			CentreDTO centreDto = new CentreDTO();
+			centreDto.setCentreCode(entity.getCentre().getCentreCode());
+			centreDto.setCentreName(entity.getCentre().getCentreName());
+
+			dto.setCentre(centreDto);
+
+			return dto;
+		}).toList();
 	}
 	
 	public List<CentreBook> getAllRecords(){
 		return centreBookRepository.findAll();	
 		
 	}
-	public List<CentreBook> getBooksByCentreCode(int centreCode){
-		return centreBookRepository.findByCentreCentreCode(centreCode);
+	public List<CentreBookTable> getBooksByCentreCode(int centreCode){
+		return centreBookRepository.findByCentreCentreCode(centreCode)
+				.stream()
+				.map(cb -> {
+					int pendingForApproval = bookAllocationRepo.sumQuantityByMmsIdAndCentreCode(
+							cb.getBook().getMmsId(),
+							centreCode
+					);
+					int availableQuantity = cb.getAllocatedQuantity() - pendingForApproval;
+
+					CentreBookTable dto = new CentreBookTable();
+					dto.setMmsId(cb.getBook().getMmsId());
+					dto.setBookName(cb.getBook().getBookName());
+					dto.setQuantity(Math.max(availableQuantity, 0));
+					dto.setAmount(cb.getBook().getAmount());
+					return dto;
+				})
+				.toList();
 	}
 	
 	public Map<String,Map<LocalDate, List<BookAllotmentAllocationRecord>>> getRecordBasedUponCentre(int centreCode){

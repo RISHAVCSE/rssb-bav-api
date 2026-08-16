@@ -10,8 +10,14 @@ public class CentreDTO {
 	private String email;
 	private Integer phoneNumber;
 
+	public CentreDTO(int centreCode, String centreName, Integer sanctionedAmount, Integer amountUtilized, String email, Integer phoneNumber) {
+	}
 
-	
+	public CentreDTO() {
+
+	}
+
+
 	public int getCentreCode() {
 		return centreCode;
 	}

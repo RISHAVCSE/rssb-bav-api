@@ -1,62 +1,40 @@
 package com.RSSBAMB.API.model;
 
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Data;
+
+import java.util.List;
 
 
 @Data
 @Entity
-@Table(name="users")
+@Table(name="users" , uniqueConstraints = @UniqueConstraint(columnNames = "keycloak_id"))
 public class User {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private long userId;
-	@Column(nullable=false,unique=true)
-	private String userName;
-	
-	@Column(nullable=false)
-	private String password;
-	
-	@Column(nullable=false)
-	private String role;
+	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-	public long getUserId() {
-		return userId;
-	}
+	@Column(name="keycloak_id", nullable=false, unique=true)
+	private String keycloakId;
 
-	public void setUserId(long userId) {
-		this.userId = userId;
-	}
+	@Column(nullable=false, unique=true)
+	private String username;
 
-	public String getUserName() {
-		return userName;
-	}
+	private String email;
+	private String firstName;
+	private String lastName;
 
-	public void setUserName(String userName) {
-		this.userName = userName;
-	}
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = true)
+	private Role role;
+	private String createdBy;
 
-	public String getPassword() {
-		return password;
-	}
+	@ManyToOne
+	@JoinColumn(name="parent_user_id")
+	private User parentUser;
 
-	public void setPassword(String password) {
-		this.password = password;
-	}
+	@OneToMany(mappedBy = "parentUser")
+	private List<User> subUsers;
 
-	public String getRole() {
-		return role;
-	}
 
-	public void setRole(String role) {
-		this.role = role;
-	}
-	
-		
 }

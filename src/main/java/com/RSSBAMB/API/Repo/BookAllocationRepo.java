@@ -20,4 +20,7 @@ public interface BookAllocationRepo extends JpaRepository<BookAllocation,Long> {
 	
 	@Query("SELECT COALESCE(SUM(a.quantity),0) FROM BookAllocation a WHERE a.mmsId= :mmsId")
 	int sumQuantityByMmsId(@Param("mmsId") String mmsId);
+
+	@Query("SELECT COALESCE(SUM(a.quantity),0) FROM BookAllocation a WHERE a.mmsId = :mmsId AND a.CentreCode = :centreCode")
+	int sumQuantityByMmsIdAndCentreCode(@Param("mmsId") String mmsId, @Param("centreCode") int centreCode);
 }

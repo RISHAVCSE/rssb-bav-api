@@ -7,9 +7,17 @@ public class BookWithStatusDTO {
 	    private int amount;
 	    private int pendingForApprovalQuantity;
 	    private int allotedQuantity;
-	    
-	    
-	    public String getMmsId() {
+		private int type;
+
+	public int getType() {
+		return type;
+	}
+
+	public void setType(int type) {
+		this.type = type;
+	}
+
+	public String getMmsId() {
 			return mmsId;
 		}
 
@@ -70,13 +78,14 @@ public class BookWithStatusDTO {
 
 
 		public BookWithStatusDTO(String mmsId, String bookName, int quantity, int amount, 
-                int allotedQuantity, int pendingForApprovalQuantity) {
+                int allotedQuantity, int pendingForApprovalQuantity,int type) {
 this.mmsId = mmsId;
 this.bookName = bookName;
 this.quantity = quantity;
 this.amount = amount;
 this.allotedQuantity = allotedQuantity;
 this.pendingForApprovalQuantity = pendingForApprovalQuantity;
+this.type=type;
 }
 
 }

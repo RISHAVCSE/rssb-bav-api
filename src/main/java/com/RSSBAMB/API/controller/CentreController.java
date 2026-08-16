@@ -30,7 +30,7 @@ public class CentreController {
 	CentreService centreService;
 	
 	@GetMapping("/getAllCentres")
-	public List<Centres> getAllCentres(){
+	public List<CentreDTO> getAllCentres(){
 		return centreService.getAllCentres();
 	}
 	
