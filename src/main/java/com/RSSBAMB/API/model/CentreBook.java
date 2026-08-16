@@ -2,6 +2,7 @@ package com.RSSBAMB.API.model;
 
 import java.util.Date;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -24,10 +25,12 @@ public class CentreBook {
 	
 	@ManyToOne
 	@JoinColumn(name = "mmsId", nullable = false)
+	@JsonBackReference
 	private Books book;
 	
 	@ManyToOne
 	@JoinColumn(name="centreCode",nullable=false)
+	@JsonBackReference
 	private Centres centre;
 	
 	@Column(nullable=false)

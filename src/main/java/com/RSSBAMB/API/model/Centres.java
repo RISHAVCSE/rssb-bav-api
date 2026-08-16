@@ -11,9 +11,11 @@ import jakarta.persistence.Table;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name="centre_list")
 public class Centres {
@@ -37,47 +39,6 @@ public class Centres {
 	
 	@OneToMany(mappedBy="centre", cascade=CascadeType.ALL)
 	private List<CentreBook> centreBooks;
-	
-	public int getCentreCode() {
-		return centreCode;
-	}
-	public void setCentreCode(int centreCode) {
-		this.centreCode = centreCode;
-	}
-	public String getCentreName() {
-		return centreName;
-	}
-	public void setCentreName(String centreName) {
-		this.centreName = centreName;
-	}
-	public Integer getSanctionedAmount() {
-		return sanctionedAmount;
-	}
-	public void setSanctionedAmount(Integer sanctionedAmount) {
-		this.sanctionedAmount = sanctionedAmount;
-	}
-	public Integer getAmountUtilized() {
-		return amountUtilized;
-	}
-	public void setAmountUtilized(Integer amountUtilized) {
-		this.amountUtilized = amountUtilized;
-	}
-	public String getEmail() {
-		return email;
-	}
-	public void setEmail(String email) {
-		this.email = email;
-	}
-	public Integer getPhoneNumber() {
-		return phoneNumber;
-	}
-	public void setPhoneNumber(Integer phoneNumber) {
-		this.phoneNumber = phoneNumber;
-	}
 
-	
 
-	
-	
-																		
 }

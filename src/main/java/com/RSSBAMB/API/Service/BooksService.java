@@ -52,6 +52,7 @@ public class BooksService {
 		books.setAmount(booksRegisterDTO.getAmount());
 		books.setMmsId(booksRegisterDTO.getMmsId());
 		books.setQuantity(booksRegisterDTO.getQuantity());
+		books.setType(booksRegisterDTO.getType());
 		booksRepo.save(books);
 		BooksHistory historyRecord=books.createHistoryRecord("ADD","SuperAdmin");
 		
@@ -82,8 +83,23 @@ public class BooksService {
 		return booksRepo.findAll();
 		
 	}
-	public List<BookWithStatusDTO> getAllBooksWithStatus(){
-	  List<Books> books=booksRepo.findAll();
+
+    public List<Books> getDetailsById(int type){
+
+		if(type==0){
+			return   booksRepo.findAll();
+		}else{
+			return booksRepo.findByType(type);
+		}
+
+    }
+	public List<BookWithStatusDTO> getAllBooksWithStatus(int type){
+  List<Books> books=booksRepo.findAll();
+		if(type==0){
+         books=booksRepo.findAll();
+		}else{
+	     books=booksRepo.findByType(type);
+		}
 	  
 	  
 	  return books.stream().map(book -> {
@@ -98,7 +114,8 @@ public class BooksService {
               book.getQuantity(),
               book.getAmount(),
               allotedQuantityByCentre,
-              pendingForReview
+              pendingForReview,
+				  book.getType()
           );
       }).collect(Collectors.toList());
   }

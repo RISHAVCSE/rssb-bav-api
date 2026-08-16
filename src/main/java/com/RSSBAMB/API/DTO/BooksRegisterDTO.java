@@ -7,6 +7,7 @@ public class BooksRegisterDTO {
 	private int amount;
 	private int quantity;
 	private int stockavailable;
+	private Integer type;
 	
 	public String getMmsId() {
 		return mmsId;
@@ -41,6 +42,12 @@ public class BooksRegisterDTO {
 	public void setStockavailable(int stockavailable) {
 		this.stockavailable = stockavailable;
 	}
-	
 
+	public Integer getType() {
+		return type;
+	}
+
+	public void setType(Integer type) {
+		this.type = type;
+	}
 }

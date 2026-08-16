@@ -4,6 +4,8 @@ public class CentreBookDTO {
 	private String mmsId;
 	private int centreCode;
 	private int quantity;
+	private CentreDTO centre;
+
 	public String getMmsId() {
 		return mmsId;
 	}
@@ -22,6 +24,12 @@ public class CentreBookDTO {
 	public void setQuantity(int quantity) {
 		this.quantity = quantity;
 	}
-	
 
+	public CentreDTO getCentre() {
+		return centre;
+	}
+
+	public void setCentre(CentreDTO centre) {
+		this.centre = centre;
+	}
 }

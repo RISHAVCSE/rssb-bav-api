@@ -35,11 +35,38 @@ public class CentreService {
 		
 		return centreRepo.save(centres);
 	}
-	
-	public List<Centres> getAllCentres(){
-		return centreRepo.findAll();
+
+//	public List<Centres> getAllCentres() {
+//		List<Centres> centres = centreRepo.findAll();
+//
+//		return centres;
+//
+//	}
+
+	public List<CentreDTO> getAllCentres() {
+		List<Centres> centres = centreRepo.findAll();
+		return centres.stream()
+				.map(this::convertToDTO) // use your existing mapper
+				.toList();
 	}
-	
+	private CentreDTO convertToDTO(Centres centre) {
+		CentreDTO dto = new CentreDTO();
+		dto.setCentreCode(centre.getCentreCode());
+		dto.setAmountUtilized(centre.getAmountUtilized());
+		dto.setEmail(centre.getEmail());
+		dto.setPhoneNumber(centre.getPhoneNumber());
+		dto.setCentreName(centre.getCentreName());
+		dto.setSanctionedAmount(centre.getSanctionedAmount());
+		return dto;
+	}
+
+
+//	public List<CentreRepo.CentreView> getAllCentres() {
+//		return centreRepo.findAllProjectedBy();
+//	}
+
+
+
 	public Centres updateCentre(CentreDTO centreDTO) {
 		
 		Optional<Centres> existing=centreRepo.findByCentreCode(centreDTO.getCentreCode());
